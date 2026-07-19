@@ -12,7 +12,7 @@
             --primary-color: #6366f1;
             --primary-hover: #4f46e5;
             --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-bg: rgba(255, 255, 255, 0.9);
             --text-dark: #1e293b;
             --text-muted: #64748b;
         }
@@ -29,11 +29,9 @@
             box-sizing: border-box;
         }
 
-        /* การ์ดสไตล์กระจกโปร่งแสง */
         .ai-card {
             background: var(--card-bg);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 35px;
             width: 100%;
@@ -56,7 +54,6 @@
             margin: 0 0 25px 0;
         }
 
-        /* ปุ่มเปิดกล้อง */
         .btn-start {
             background-color: var(--primary-color);
             color: white;
@@ -74,21 +71,18 @@
         .btn-start:hover {
             background-color: var(--primary-hover);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
         }
 
-        /* กล่องครอบกล้องเว็บแคม */
         .webcam-view {
             width: 220px;
             height: 220px;
             margin: 0 auto 25px auto;
-            border-radius: 50%; /* เปลี่ยนเป็นทรงกลมสไตล์ล้ำๆ */
+            border-radius: 50%;
             overflow: hidden;
             border: 6px solid white;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
             background-color: #cbd5e1;
-            display: none; /* ซ่อนไว้รอการเปิดกล้อง */
-            position: relative;
+            display: none;
         }
 
         #webcam-container canvas {
@@ -97,7 +91,6 @@
             object-fit: cover;
         }
 
-        /* รายการแสดงผลลัพธ์ */
         #label-container {
             display: flex;
             flex-direction: column;
@@ -113,7 +106,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
 
         .class-text {
@@ -139,83 +131,74 @@
 
 <div class="ai-card">
     <h2>Image AI Detector</h2>
-    <p class="desc">ระบบจะเปิดใช้งานกล้อง และทำการอัปเดตวิเคราะห์ผลทุกๆ 3 วินาที</p>
+    <p class="desc">กล้องจะแสดงผลลื่นไหลปกติ แต่ระบบจะวิเคราะห์ผลใหม่ทุกๆ 3 วินาที</p>
     
-    <!-- ปุ่มสำหรับกดเริ่มต้น -->
-    <button type="button" class="btn-start" onclick="init()">Start System</button>
+    <button type="button" class="btn-start" onclick="init()">เปิดใช้งานระบบ</button>
     
-    <!-- ส่วนแสดงกล้องเว็บแคม -->
     <div class="webcam-view" id="webcam-view">
         <div id="webcam-container"></div>
     </div>
     
-    <!-- ส่วนแสดงผลความน่าจะเป็น -->
     <div id="label-container"></div>
 </div>
 
-<!-- โหลดไลบรารีตามโค้ดต้นฉบับของคุณ -->
+<!-- โหลดไลบรารีดั้งเดิม -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <script type="text/javascript">
-    // ลิงก์โมเดลจากโค้ดเดิมของคุณ
     const URL = "https://teachablemachine.withgoogle.com/models/1-kat_Cr7k/";[cite: 3]
 
     let model, webcam, labelContainer, maxPredictions;
-    let timerLoop; // ตัวแปรจัดการเวลา 3 วินาที
+    let lastPredictTime = 0; // ใช้บันทึกเวลาที่ทายผลล่าสุด
 
-    // ทำหน้าที่โหลดโมเดลและเซ็ตอัปกล้อง
     async function init() {
-        // ซ่อนปุ่ม และแสดงกรอบกล้องวงกลม
         document.querySelector(".btn-start").style.display = "none";
         document.getElementById("webcam-view").style.display = "block";
 
         const modelURL = URL + "model.json";[cite: 3]
         const metadataURL = URL + "metadata.json";[cite: 3]
 
-        // โหลดโมเดล Teachable Machine
         model = await tmImage.load(modelURL, metadataURL);[cite: 3]
         maxPredictions = model.getTotalClasses();[cite: 3]
 
-        // ตั้งค่ากล้อง
         const flip = true;[cite: 3]
-        webcam = new tmImage.Webcam(220, 220, flip); // ปรับขนาดให้เข้ากับกรอบวงกลม[cite: 3]
-        await webcam.setup(); // ขออนุญาตเข้าถึงกล้อง[cite: 3]
+        webcam = new tmImage.Webcam(220, 220, flip);[cite: 3]
+        await webcam.setup(); 
         await webcam.play();[cite: 3]
         
-        // อัปเดตกล้องเฟรมแรกทันที
-        webcam.update();
+        // รัน Loop ของกล้องวิดีโอ
+        window.requestAnimationFrame(loop);[cite: 3]
 
-        // แสดงภาพกล้องลงในโฟลเดอร์ปลายทาง
         document.getElementById("webcam-container").appendChild(webcam.canvas);[cite: 3]
         labelContainer = document.getElementById("label-container");[cite: 3]
         
-        // เจนแถบแสดงผลคลาสตามจำนวนคลาสในโมเดล[cite: 3]
         for (let i = 0; i < maxPredictions; i++) {[cite: 3]
             let row = document.createElement("div");
             row.className = "label-row";
             labelContainer.appendChild(row);[cite: 3]
         }
-
-        // ประมวลผลรอบแรกทันที
-        await predict();
-
-        // เปลี่ยนระบบจากลูปรัวๆ มาใช้ setInterval ทำงานทุก 3000 มิลลิวินาที (3 วินาที) แทน
-        timerLoop = setInterval(async () => {
-            webcam.update(); // อัปเดตภาพจากกล้องตัวล่าสุด
-            await predict();  // สั่งให้ AI คำนวณทำนายผล
-        }, 3000);
     }
 
-    // ฟังก์ชันรันโมเดลเพื่อจำแนกภาพ
+    // ฟังก์ชันนี้จะทำงานตลอดเวลาแบบ Real-time เพื่อให้ภาพกล้องลื่นไหล
+    async function loop(timestamp) {
+        webcam.update(); // อัปเดตเฟรมภาพกล้อง (ห้ามหน่วงตัวนี้ ไม่งั้นกล้องค้าง)
+        
+        // ตรวจสอบว่าเวลาผ่านไปครบ 3000 มิลลิวินาที (3 วินาที) หรือยัง
+        if (!lastPredictTime || timestamp - lastPredictTime >= 3000) {
+            lastPredictTime = timestamp; // บันทึกเวลาปัจจุบัน
+            await predict(); // สั่งให้ AI ทายผลเฉพาะตอนครบ 3 วินาที
+        }
+        
+        window.requestAnimationFrame(loop);[cite: 3]
+    }
+
     async function predict() {
         const prediction = await model.predict(webcam.canvas);[cite: 3]
         for (let i = 0; i < maxPredictions; i++) {[cite: 3]
             const className = prediction[i].className;[cite: 3]
-            // แปลงค่าทศนิยมเดิม ให้เป็นเลขเปอร์เซ็นต์อ่านง่าย (เช่น 0.92 -> 92%)
             const percentValue = (prediction[i].probability * 100).toFixed(0) + "%";
             
-            // แสดงข้อมูลจัดรูปแบบฝั่งซ้ายและขวาอย่างสมดุล
             labelContainer.childNodes[i].innerHTML = `
                 <span class="class-text">${className}</span>
                 <span class="percentage-badge">${percentValue}</span>
